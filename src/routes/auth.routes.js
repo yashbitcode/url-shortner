@@ -1,12 +1,12 @@
 const express = require("express");
 const {
     signupReqBodyValidations,
-    loginReqBodyValidations
+    loginReqBodyValidations,
 } = require("../validations/auth.validations");
-const jwt = require("jsonwebtoken");
-const getHashAndSalt = require("../utils/hash");
+const { getHashAndSalt } = require("../utils/hash");
 const router = express.Router();
 const UserService = require("../services/user.service");
+const { createToken } = require("../utils/token");
 
 router.post("/signup", async (req, res) => {
     try {
@@ -15,7 +15,7 @@ router.post("/signup", async (req, res) => {
         );
 
         if (!validations.success) throw Error(validations.error);
-        const { firstname, lastname, email, password } = req.body;
+        const { firstname, lastname, email, password } = validations.data;
 
         if (!(firstname && email && password))
             throw Error("Credentials are required");
@@ -25,7 +25,7 @@ router.post("/signup", async (req, res) => {
         if (doc) throw Error("User already exists");
 
         const { salt, hashPassword } = getHashAndSalt(password);
-        
+
         const user = await UserService.createUser({
             firstname,
             lastname,
@@ -53,24 +53,26 @@ router.post("/login", async (req, res) => {
         );
 
         if (!validations.success) throw Error(validations.error);
-        const { email, password } = req.body;
+        const { email, password } = validations.data;
 
         const user = await UserService.getUserByEmail(email);
 
-        if(!user) throw Error("User doesn't exist");
+        if (!user) throw Error("User doesn't exist");
 
         const { hashPassword } = getHashAndSalt(password, user.salt);
 
-        if(user.password !== hashPassword) throw Error("Wrong credentials");
-
-        const token = jwt.sign({
-            ...user,
-            iat: Date.now()
-        }, process.env.JWT_PRIVATE_KEY);
+        if (user.password !== hashPassword) throw Error("Wrong credentials");
+        const token = await createToken({
+            firstname: user.firstname,
+            lastname: user.lastname,
+            email: user.email,
+            id: user.id,
+            iat: Date.now(),
+        });
 
         res.json({
             success: true,
-            token
+            token,
         });
     } catch (error) {
         res.status(400).json({

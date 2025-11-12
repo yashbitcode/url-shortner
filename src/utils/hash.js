@@ -13,4 +13,6 @@ const getHashAndSalt = (password, userSalt) => {
     };
 };
 
-module.exports = getHashAndSalt;
+module.exports = {
+    getHashAndSalt
+};
