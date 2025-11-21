@@ -20,7 +20,6 @@ class UserService {
     }
 
     async createUser({ firstname, lastname, email, password, salt }) {
-        console.log({ firstname, lastname, email, password, salt })
         const [user] = await db
             .insert(userTable)
             .values({
