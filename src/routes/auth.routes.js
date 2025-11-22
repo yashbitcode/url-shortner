@@ -34,7 +34,7 @@ router.post("/signup", async (req, res) => {
             salt,
         });
 
-        return res.json({
+        return res.status(201).json({
             success: true,
             user,
         });
@@ -70,7 +70,7 @@ router.post("/login", async (req, res) => {
             iat: Date.now(),
         });
 
-        res.json({
+        res.status(201).json({
             success: true,
             token,
         });

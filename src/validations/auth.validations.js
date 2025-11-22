@@ -20,8 +20,6 @@ const loginReqBodyValidations = z.object({
         .refine((password) => /^[a-zA-Z0-9!@#$%^&*]{6,16}$/.test(password)),
 });
 
-
-
 module.exports = {
     signupReqBodyValidations,
     loginReqBodyValidations

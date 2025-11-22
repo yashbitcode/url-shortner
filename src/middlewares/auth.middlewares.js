@@ -1,5 +1,6 @@
 const express = require("express");
 const { verifyToken } = require("../utils/token");
+
 /**
  * @param {express.Request} req 
  * @param {express.Response} res 
@@ -29,6 +30,12 @@ const authMiddleware = async (req, res, next) => {
     }
 };
 
+/**
+ * @param {express.Request} req 
+ * @param {express.Response} res 
+ * @param {express.NextFunction} next 
+ * @returns 
+ */
 const ensureAuthenticated = async (req, res, next) => {
     try {
         const user = req.user;
