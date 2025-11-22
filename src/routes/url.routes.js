@@ -69,6 +69,49 @@ router.delete("/:shortCode", ensureAuthenticated, async (req, res) => {
     }
 });
 
+/* 
+    update: 
+        - code up.
+        - url up.
+
+    - to do so:
+        - auth. check
+    
+    - payload:
+        - oldCode, newCode?, url? 
+*/
+
+router.patch("/updateUrl",ensureAuthenticated, async (req, res) => {
+    try {
+        const { oldCode, newCode, url } = req.body;
+        if(!oldCode) throw Error("Old code is needed");
+
+        const isAuthorized = await URLService.checkUrlAuthorization(
+            req.user.id,
+            oldCode
+        );
+        
+        if(!newCode && !url) throw Error("Either new code or url is needed");
+        if (!isAuthorized) throw Error("You not authorized to update this URL"); 
+        
+        const doc = await URLService.updateShortenUrl(req.user.id, oldCode, {
+            ...(newCode && {code: newCode}),
+            ...(url && {targetUrl: url}),
+        });
+
+        res.json({
+            success: true,
+            doc,
+            message: "URL updated successfully!",
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message ?? "Something went wrong",
+        });
+    }
+});
+
 router.get("/:shortCode", async (req, res) => {
     try {
         const { shortCode } = req.params;

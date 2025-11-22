@@ -53,6 +53,20 @@ class URLService {
         if (doc.userId !== userId) return false;
         return true;
     }
+
+    async updateShortenUrl(userId, code, payload) {
+        const [doc] = await db
+            .update(urlTable)
+            .set(payload)
+            .where(and(eq(userId, urlTable.userId), eq(code, urlTable.code)))
+            .returning({
+                id: urlTable.id,
+                code: urlTable.code,
+                targetUrl: urlTable.targetUrl,
+            });
+
+        return doc;
+    }
 }
 
 module.exports = new URLService();
