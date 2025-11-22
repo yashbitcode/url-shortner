@@ -3,10 +3,7 @@ const { ensureAuthenticated } = require("../middlewares/auth.middlewares");
 const {
     urlShortenReqBodyValidation,
 } = require("../validations/url.validations");
-const { db } = require("../db");
-const { urlTable } = require("../models");
-const { getNanoId } = require("../utils/nanoId");
-const { eq } = require("drizzle-orm");
+const URLService = require("../services/url.service");
 const router = express.Router();
 
 router.post("/shorten", ensureAuthenticated, async (req, res) => {
@@ -19,21 +16,12 @@ router.post("/shorten", ensureAuthenticated, async (req, res) => {
 
         const { url, code } = validation.data;
 
-        const [doc] = await db
-            .insert(urlTable)
-            .values({
-                code: code ?? getNanoId(),
-                targetUrl: url,
-                userId: req.user.id,
-            })
-            .returning({
-                id: urlTable.id,
-                code: urlTable.code,
-                targetUrl: urlTable.targetUrl,
-                userId: urlTable.userId,
-            });
+        const doc = await URLService.createShortenUrl(req.user.id, url, code);
 
-        res.status(201).json(doc);
+        res.status(201).json({
+            success: true,
+            doc,
+        });
     } catch (error) {
         res.status(400).json({
             success: false,
@@ -42,17 +30,52 @@ router.post("/shorten", ensureAuthenticated, async (req, res) => {
     }
 });
 
-router.get("/:shortCode?", async (req, res) => {
+router.get("/getAllUrls", ensureAuthenticated, async (req, res) => {
+    try {
+        const docs = await URLService.getAllSpecificUserUrls(req.user.id);
+        res.json({
+            success: true,
+            codes: docs,
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message ?? "Something went wrong",
+        });
+    }
+});
+
+router.delete("/:shortCode", ensureAuthenticated, async (req, res) => {
     try {
         const { shortCode } = req.params;
-        if (!shortCode) throw Error("Code is not there");
+        const isAuthorized = await URLService.checkUrlAuthorization(
+            req.user.id,
+            shortCode
+        );
 
-        const [doc] = await db
-            .select({ targetUrl: urlTable.targetUrl })
-            .from(urlTable)
-            .where(eq(shortCode, urlTable.code));
+        if (!isAuthorized) throw Error("You not authorized to delete this URL");
 
+        await URLService.deleteShortenUrl(req.user.id, shortCode);
+
+        res.json({
+            success: true,
+            message: "URL deleted successfully!",
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message ?? "Something went wrong",
+        });
+    }
+});
+
+router.get("/:shortCode", async (req, res) => {
+    try {
+        const { shortCode } = req.params;
+
+        const doc = await URLService.getShortenUrl(shortCode);
         if (!doc) throw Error("Invalid code");
+
         res.redirect(doc.targetUrl);
     } catch (error) {
         res.status(400).json({
